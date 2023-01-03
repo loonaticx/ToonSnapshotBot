@@ -80,6 +80,15 @@ client = bot
 async def on_ready():
     print(f'Logged in as {client.user} (ID: {client.user.id})')
     print('------')
+    # do an initial toon render here and set the bots pfp to it
+    # ( might be good to do a headshot/toptoons pic for it as well
+    pfp_path = "img/test/image_test.png"
+
+    fp = open(pfp_path, 'rb')
+    pfp = fp.read()
+    await bot.user.edit(avatar = pfp)
+    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.competing, name="toontow"))
+
 
 
 @client.tree.command()
