@@ -149,21 +149,34 @@ async def building(interaction: discord.Interaction, count: Optional[bool] = Fal
         await interaction.response.send_message(bldgName)
 
 @client.tree.command()
-async def knockknock(interaction: discord.Interaction, general_jokes: Optional[bool] = True, contest_jokes: Optional[bool] = True, count: Optional[bool] = False):
+async def knockknock(interaction: discord.Interaction, general_jokes: Optional[bool] = True, contest_jokes: Optional[bool] = True):
     jokeChoices = []
     if general_jokes:
         jokeChoices += localizer.KnockKnockJokes
     if contest_jokes:
-        jokeChoices += localizer.KnockKnockContestJokes
+        # this is formatted much differently than the general jokes
+        for jokeid in localizer.KnockKnockContestJokes.keys():
+            if isinstance(localizer.KnockKnockContestJokes[jokeid], dict):
+                for i in localizer.KnockKnockContestJokes[jokeid].keys():
+                    jokeChoices += [localizer.KnockKnockContestJokes[jokeid][i]]
+            else:
+                jokeChoices += [localizer.KnockKnockContestJokes[jokeid]]
 
     if not jokeChoices:
         await interaction.response.send_message(f"Hey! You need at least one option to be True!", ephemeral=True)
         return
 
-    """Sends the text into the current channel."""
-    if count:
-        # QuestDialogDict may only be mainline tasks though.? if QuestDict focuses on JFF this will add on to the count
-        await interaction.response.send_message(f"Total Joke Entries = {len(jokeChoices)}")
+    jokeIndex = random.randrange(len(jokeChoices))
+    first, second = jokeChoices[jokeIndex]
+
+    em = discord.Embed(
+        title = "Knock Knock Joke!",
+        description = f"**Knock Knock**\n*Who's there?*\n**{first}**\n*{first} who?*\n**{second}**"
+    )
+    em.set_footer(text=f"Selected Joke #{jokeIndex} (out of {len(jokeChoices)})")
+
+    await interaction.response.send_message(embed=em)
+
     else:
         first, second = random.choice(jokeChoices)
         await interaction.response.send_message(f"**Knock Knock**\n*Who's there?*\n**{first}**\n*{first} who?*\n**{second}**")
