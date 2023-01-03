@@ -90,6 +90,141 @@ async def on_ready():
     await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.competing, name="toontow"))
 
 
+def generateQuestEmbed(avName="Toon", questID=None):
+    quests = localizer.QuestDialogDict
+    if not questID:
+        questID, dialog = random.choice(list(quests.items()))
+    else:
+        dialog = quests[questID]
+
+    dialog = dialog.get(localizer.QUEST).replace('\a', '\n').replace('_avName_', f'**{avName}**')
+
+    em = discord.Embed(
+        title = "ToonTask",
+        description = dialog,
+    )
+    em.set_footer(text=f"Quest ID: {questID}\nTotal Quest Entries: {len(quests)}", icon_url  = "attachment://task.png")
+
+    file = discord.File("img/task.png", filename = "task.png")
+    em.set_thumbnail(url = "attachment://task.png")
+    return (em, file)
+
+
+def generateNpcInfo(npcID):
+    # set NpcInfo attrs here by looking up npcID stuff
+    info = {
+        "Building": "Gay Gaming Goober Group",
+        "Location": "Punchline Place, Toontown Central",
+        "Type": "Shopkeeper",
+        "Random DNA": "False"
+    }
+    return info
+
+def generateNPCRender(renderArgs):
+    # generate toonsnapshot, pass args if needed?
+    # replace this with toonsnapshot output
+    file = discord.File("img/test/image_test.png", filename = "image_test.png")
+
+    # get npc info
+    npcID = renderArgs.get("NPC_ID")
+    npcInfo = generateNpcInfo(npcID)
+
+    em = discord.Embed(
+        title = "NPC Toon",
+        description = f"Rollo The Amazing",
+    )
+    em.set_image(url = "attachment://image_test.png")
+
+    for name, value in npcInfo.items():
+        em.add_field(name=name, value = value)
+
+    em.set_footer(text=f"NPC ID: {npcID} (420 NPCs total)")
+    return em, file
+
+
+# Defines a custom Select containing colour options
+# that the user can choose. The callback function
+# of this class is called when the user changes their choice
+class Dropdown(discord.ui.Select):
+    def __init__(self):
+
+        # Set the options that will be presented inside the dropdown
+        options = [
+            discord.SelectOption(label='Red', description='Your favourite colour is red', emoji='🟥'),
+            discord.SelectOption(label='Green', description='Your favourite colour is green', emoji='🟩'),
+            discord.SelectOption(label='Blue', description='Your favourite colour is blue', emoji='🟦'),
+        ]
+
+        # The placeholder is what will be shown when no option is chosen
+        # The min and max values indicate we can only pick one of the three options
+        # The options parameter defines the dropdown options. We defined this above
+        super().__init__(placeholder='Choose your favourite colour...', min_values=1, max_values=1, options=options)
+
+    async def callback(self, interaction: discord.Interaction):
+        # Use the interaction object to send a response message containing
+        # the user's favourite colour or choice. The self object refers to the
+        # Select object, and the values attribute gets a list of the user's
+        # selected options. We only want the first one.
+        await interaction.response.send_message(f'Your favourite colour is {self.values[0]}')
+
+
+# Define a simple View that gives us a confirmation menu
+class ToggleRenderAttributesView(discord.ui.View):
+    def __init__(self, embed):
+        super().__init__()
+        self.value = None
+        self.embed = embed
+
+    # When the confirm button is pressed, set the inner value to `True` and
+    # stop the View from listening to more input.
+    # We also send the user an ephemeral message that we're confirming their choice.
+    @discord.ui.button(label='Toggle Nametag', style=discord.ButtonStyle.secondary)
+    async def toggle_nametag(self, interaction: discord.Interaction, button: discord.ui.Button):
+        file = discord.File("img/test/image_test_full.png", filename = "image_test_full.png")
+        self.embed.set_image(url = "attachment://image_test_full.png")
+        await interaction.response.edit_message(attachments = [file], embed = self.embed, view = self)
+        # await interaction.response.send_message('Confirming', ephemeral=True)
+        self.value = True
+        # self.stop()
+
+    @discord.ui.button(label='Randomize', style=discord.ButtonStyle.primary)
+    async def new_render(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # re-render whatever we just rendered but ensure random dna, or random npc id, or random whatever is set
+        await interaction.response.send_message(f'placeholder entry', ephemeral=True)
+
+
+# Define a simple View that gives us a confirmation menu
+class GenerateQuestView(discord.ui.View):
+    def __init__(self, icon):
+        super().__init__()
+        self.icon = icon
+
+    # When the confirm button is pressed, set the inner value to `True` and
+    # stop the View from listening to more input.
+    # We also send the user an ephemeral message that we're confirming their choice.
+    @discord.ui.button(label='Random ToonTask', style=discord.ButtonStyle.primary)
+    async def regenerate_quest(self, interaction: discord.Interaction, button: discord.ui.Button):
+        em, file = generateQuestEmbed(interaction.user.display_name)
+        await interaction.response.edit_message(embed = em, view = self)
+
+
+class DropdownView(discord.ui.View):
+    def __init__(self):
+        super().__init__()
+
+        # Adds the dropdown to our view object.
+        self.add_item(Dropdown())
+
+
+@client.command()
+async def color(ctx):
+    """Sends a message with our dropdown containing colours"""
+
+    # Create the view containing our dropdown
+    view = DropdownView()
+
+    # Sending a message containing our view
+    await ctx.send('Pick your favourite colour:', view=view)
 
 @client.tree.command()
 async def hello(interaction: discord.Interaction):
@@ -111,38 +246,50 @@ async def add(interaction: discord.Interaction, first_value: int, second_value: 
 # In this example, even though we use `text_to_send` in the code, the client will use `text` instead.
 # Note that other decorators will still refer to it as `text_to_send` in the code.
 @client.tree.command()
-async def quest(interaction: discord.Interaction, count: Optional[bool] = False):
-    quests = localizer.QuestDialogDict
-    """Sends the text into the current channel."""
-    if count:
-        # QuestDialogDict may only be mainline tasks though.? if QuestDict focuses on JFF this will add on to the count
-        await interaction.response.send_message(f"Total Quest Entries = {len(quests)}")
-    else:
-        _, dialog = random.choice(list(quests.items()))
-        dialog = dialog.get(localizer.QUEST).replace('\a', '\n').replace('_avName_', f'**{interaction.user.display_name}**')
-        # todo: integrate Quests.py to fix _where_ and others
-        # todo: replace QuestDialogDict with Quests.QuestDict
-        await interaction.response.send_message(dialog)
+async def quest(interaction: discord.Interaction, quest_id: Optional[int] = None):
+    # QuestDialogDict may only be mainline tasks though.? if QuestDict focuses on JFF this will add on to the count
+
+    em, file = generateQuestEmbed(interaction.user.display_name, questID=quest_id)
+    # todo: integrate Quests.py to fix _where_ and others
+    # todo: replace QuestDialogDict with Quests.QuestDict
+    view = GenerateQuestView(file)
+
+    await interaction.response.send_message(embed=em, view=view, file=file)
+    await view.wait()
 
 @client.tree.command()
-async def holiday(interaction: discord.Interaction, count: Optional[bool] = False):
+async def holiday(interaction: discord.Interaction):
     holidays = localizer.HolidayNamesInCalendar
-    """Sends the text into the current channel."""
-    if count:
-        await interaction.response.send_message(f"Total Holiday Entries = {len(holiday)}")
-    else:
-        title, dialog = random.choice(list(holidays.items()))
-        await interaction.response.send_message(f"**{title}**\n{dialog}")
+    id, holiday = random.choice(list(holidays.items()))
+    em = discord.Embed(
+        title = holiday[0],
+        description = holiday[1]
+    )
+    em.set_footer(text = f"Holiday ID: {id}\nTotal Holiday Entries: {len(holidays)}")
+    await interaction.response.send_message(embed=em)
+
+
+# @client.tree.command()
+# async def stats(interaction: discord.Interaction):
+#     # collect cool toontown stats like total unique name combinations
+#     holidays = localizer.HolidayNamesInCalendar
+#     id, holiday = random.choice(list(holidays.items()))
+#     em = discord.Embed(
+#         title = holiday[0],
+#         description = holiday[1]
+#     )
+#     em.set_footer(text = f"Holiday ID: {id}\nTotal Holiday Entries: {len(holidays)}")
+#     await interaction.response.send_message(embed=em)
 
 
 @client.tree.command()
 async def building(interaction: discord.Interaction, count: Optional[bool] = False):
     bldgs = localizer.zone2TitleDict
     bldgName = ""
-    """Sends the text into the current channel."""
     if count:
         await interaction.response.send_message(f"Total Building Entries = {len(bldgs)}")
     else:
+        # Since this command spits out building names, we don't want to it to print *nothing*
         while not bldgName:
             _, title = random.choice(list(bldgs.items()))
             bldgName = title[0]
@@ -177,9 +324,31 @@ async def knockknock(interaction: discord.Interaction, general_jokes: Optional[b
 
     await interaction.response.send_message(embed=em)
 
+@client.tree.command()
+async def emtest(interaction: discord.Interaction):
+
+
+    # file2 = discord.File("img/test/image_toon_full.png", filename = "image_toon_full.png")
+
+    # embed = discord.Embed()
+    # await channel.send(file = file, embed = embed)
+    em, file = generateNPCRender(RenderArgs)
+
+    # in future, pass file since it'll be re=rendered
+    # NB: make it easier just re-render and use that output??? but then cache.. fuck
+    # maybe have an option to pass a custom file name to toonrender
+    view = ToggleRenderAttributesView(embed=em)
+
+    await interaction.response.send_message(files=[file], embed=em, view=view)
+    await view.wait()
+    if view.value is None:
+        print('Timed out...')
+    elif view.value:
+        # this is where you would re-call the toon render operation?
+        # actually this might be called after the view :b so no
+        print("confirm")
     else:
-        first, second = random.choice(jokeChoices)
-        await interaction.response.send_message(f"**Knock Knock**\n*Who's there?*\n**{first}**\n*{first} who?*\n**{second}**")
+        print('Cancelled...')
 
 @client.tree.command()
 async def toontip(interaction: discord.Interaction,
@@ -328,7 +497,7 @@ async def fruits(interaction: discord.Interaction, fruit: str):
 #
 # @app_commands.choices(npc=pickRandomNPCNames())
 
-@app_commands.choices(npc=npcChoices)
+# npc: app_commands.Choice[str] = None,
 async def toon(interaction: discord.Interaction,
                random_dna: Optional[bool] = True, npc: Optional[str] = None,
                toon_name: Optional[str] = None, nametag: Optional[bool] = True,
