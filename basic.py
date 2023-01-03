@@ -6,9 +6,34 @@ from discord import app_commands
 from app_commands import localizer
 import random
 from config import config
+from RenderEnums import *
 
 MY_GUILD = discord.Object(id=config.BOT_GUILD)  # replace with your guild id
 
+RenderArgs = {
+    # /render
+    RenderType: RenderType.Toon,
+    "WANT_NAMETAG": True,
+    ChatBubbleType: ChatBubbleType.Normal,
+    "CUSTOM_PHRASE": None,  # alt to speedchat phrase; not none = user gave input
+    FrameType: FrameType.Bodyshot,
+
+    # /render: context-specific
+    "NAME": None,  # generate random if None
+    "DNA_RANDOM": True,
+    "SPEEDCHAT_PHRASE": None,  # speedchat phrase id if not None
+    "POSE_PRESET": None,  # context specific, None -> random
+    "DNA_STRING": None,  # generate random dna if None, might be a literal dna (list; not netstring)
+
+    # /toon and /npc
+    EyeType: EyeType.NormalOpen,
+    MuzzleType: MuzzleType.Neutral,
+
+    # /npc
+    "NPC_ID": None,  # none -> random
+
+
+}
 
 class MyClient(discord.Client):
     def __init__(self, *, intents: discord.Intents):
