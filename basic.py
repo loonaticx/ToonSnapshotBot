@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 
 import discord
 from discord import app_commands
@@ -222,15 +222,11 @@ async def toontip(interaction: discord.Interaction,
 # To make an argument optional, you can either give it a supported default argument
 # or you can mark it as Optional from the typing standard library. This example does both.
 
-npcnamechoices = [
-    'bob',
-    'flippy',
-    'geezer',
-    'man'
-]
 
 
 # extracted from localizer
+# what if we did a lambda function and picked out 25 random npcs from the list
+# lambda function should guarantee randomness each time the command is ran as a compensation to the 25 limit
 npcnametest = {
     3127: "Ifalla Yufalla",
     3128: "Sticky George",
@@ -261,6 +257,63 @@ for k, v in npcnametest.items():
     )
 
 
+def pickRandomNPCNames():
+    npcRandomChoices = []
+    for i in range(15):
+        k, v = random.choice(list(NPCToonNames.items()))
+        npcRandomChoices.append(
+            app_commands.Choice(name = v, value = str(f"npc-{k}"))
+        )
+    return npcRandomChoices
+
+
+async def npc_autocomplete(interaction: discord.Interaction, current:str) -> List[app_commands.Choice[str]]:
+    options = []
+    for i in range(15):
+        k, v = random.choice(list(NPCToonNames.items()))
+        # print([k, v])
+        options.append([k, v])
+    print(options)
+    # for k, v in options:
+    #     print(v)
+
+    return [
+        app_commands.Choice(name = entry[1], value = f"npc-{entry[0]}")
+        for entry in options
+    ]
+
+
+async def fruit_autocomplete(
+        interaction: discord.Interaction,
+        current: str,
+) -> List[app_commands.Choice[str]]:
+
+    options = []
+    for i in range(15):
+        k, v = random.choice(list(NPCToonNames.items()))
+        # print([k, v])
+        options.append([k, v])
+    # print(options)
+    # for k, v in options:
+    #     print(v)
+
+    return [
+        app_commands.Choice(name = entry[1], value = f"npc-{entry[0]}")
+        for entry in options
+
+    ]
+
+    fruits = ['Banana', 'Pineapple', 'Apple', 'Watermelon', 'Melon', 'Cherry']
+    return [
+        app_commands.Choice(name=fruit, value=fruit)
+        for fruit in fruits if current.lower() in fruit.lower()
+    ]
+
+@client.tree.command()
+@app_commands.autocomplete(fruit=fruit_autocomplete)
+async def fruits(interaction: discord.Interaction, fruit: str):
+    await interaction.response.send_message(f'Your favourite fruit seems to be {fruit}')
+
 
 @client.tree.command()
 @app_commands.describe(
@@ -269,14 +322,20 @@ for k, v in npcnametest.items():
     toon_name = "Name of toon",
     nametag = "Display nametag"
 )
-# @app_commands.autocomplete(
-#     npc = npcnamechoices
-# )
+@app_commands.autocomplete(
+    npc = npc_autocomplete
+)
+#
+# @app_commands.choices(npc=pickRandomNPCNames())
 
 @app_commands.choices(npc=npcChoices)
 async def toon(interaction: discord.Interaction,
-               random_dna: Optional[bool] = True, npc: app_commands.Choice[str] = None,
-               toon_name: Optional[str] = None, nametag: Optional[bool] = True):
+               random_dna: Optional[bool] = True, npc: Optional[str] = None,
+               toon_name: Optional[str] = None, nametag: Optional[bool] = True,
+               frame_type: Optional[FrameType] = FrameType.Bodyshot,
+               eye_type: Optional[EyeType] = EyeType.NormalOpen,
+               chatbubble_type: Optional[ChatBubbleType] = ChatBubbleType.Normal,
+               ):
     """Says when a member joined."""
     # If no member is explicitly provided then we use the command user here
     toonName = toon_name or 'Toon'
@@ -285,8 +344,15 @@ async def toon(interaction: discord.Interaction,
     # if npc = None do random npc
     # also for npc lookup npc by name2id
 
+    RenderArgs[ChatBubbleType] = chatbubble_type
+    RenderArgs[EyeType] = eye_type
+    RenderArgs[FrameType] = frame_type
+
+
+    # https://docs.python.org/3/library/enum.html
     # The format_dt function formats the date time into a human readable representation in the official client
-    await interaction.response.send_message(f'rdna = {random_dna}, npc = {npc}, nametag = {nametag}. name= {toonName}')
+    await interaction.response.send_message(f'rdna = {random_dna}, npc = {npc}, nametag = {nametag}. name= {toonName}'
+                                            f'\n{repr(frame_type)}\n{repr(eye_type)}\n{repr(chatbubble_type)}')
 
 
 # A Context Menu command is an app command that can be run on a member or on a message by
