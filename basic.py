@@ -2,6 +2,7 @@ from typing import Optional
 
 import discord
 from discord import app_commands
+from discord.ext import commands
 
 from app_commands import localizer
 import random
@@ -35,6 +36,17 @@ RenderArgs = {
 
 }
 
+
+class MyBot(commands.Bot):
+    # In this basic example, we just synchronize the app commands to one guild.
+    # Instead of specifying a guild to every command, we copy over our global commands instead.
+    # By doing so, we don't have to wait up to an hour until they are shown to the end-user.
+    async def setup_hook(self):
+        # This copies the global commands over to your guild.
+        self.tree.copy_global_to(guild=MY_GUILD)
+        await self.tree.sync(guild=MY_GUILD)
+
+
 class MyClient(discord.Client):
     def __init__(self, *, intents: discord.Intents):
         super().__init__(intents=intents)
@@ -57,7 +69,11 @@ class MyClient(discord.Client):
 
 
 intents = discord.Intents.default()
-client = MyClient(intents=intents)
+intents.message_content = True  # required for dropdown
+
+# client = MyClient(intents=intents)
+bot = MyBot(command_prefix='/', description='blah', intents=intents)
+client = bot
 
 
 @client.event
